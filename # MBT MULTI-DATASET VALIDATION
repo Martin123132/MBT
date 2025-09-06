@@ -315,60 +315,10 @@ def mbt_cmb_cold_spot():
     return -73  # μK
 ```
 
-**Results:**
-
-- **Observed**: -70 ± 7 μK
-- **ΛCDM**: No explanation
-- **MBT**: -73 μK (4% error) ✅
-
-**Correlation coefficient r = -0.98 (>99.999% significance)**
-
------
-
-## 📊 **COMPREHENSIVE RESULTS SUMMARY**
-
-|Dataset               |Observable         |ΛCDM Status          |MBT Accuracy    |Statistical Significance|
-|----------------------|-------------------|---------------------|----------------|------------------------|
-|**Quasar Variability**|Time dilation      |10σ failure          |Perfect fit     |>99.999%                |
-|**Supernova Duration**|Light curve stretch|Poor fit             |Excellent       |~5σ improvement         |
-|**GRB Duration**      |Burst timescales   |Systematic deviation |Natural fit     |~4σ better              |
-|**Binary Pulsar**     |Orbital decay      |Good fit             |Better fit      |Slight improvement      |
-|**Earth Precession**  |Perihelion advance |67% too low          |0.4% error      |Revolutionary           |
-|**Galaxy Clusters**   |Velocity dispersion|Requires dark matter |No dark matter  |Paradigm shift          |
-|**Pioneer Anomaly**   |Unexplained drift  |No prediction        |First principles|Historical validation   |
-|**CMB Cold Spot**     |No explanation     |r = -0.98 correlation|>99.999%        |                        |
-
------
-
-## 🎯 **PATTERN RECOGNITION**
-
 ### **Universal MBT Success Formula**
 
 ```
-MBT_accuracy = f(motion_coupling + memory_effects + curvature_resistance)
-```
-
-**Every dataset shows the same pattern:**
-
-1. **ΛCDM struggles** with observations requiring exotic components
-1. **MBT naturally explains** the same phenomena from first principles
-1. **Statistical improvement** ranges from significant to revolutionary
-1. **No parameter tuning** - MBT predictions derive from universal motion equation
-
-### **Cumulative Statistical Evidence**
-
-```python
-# Combined probability analysis
-datasets = 7
-average_significance = 5  # sigma
-cumulative_p_value = (1e-7)**7  # Conservative estimate
-
-# Probability MBT is wrong across ALL datasets
-total_p_value = 1e-49  # Essentially impossible
-```
-
-**The probability that MBT is wrong across all these datasets is less than 1 in 10⁴⁹**
-
+MBT_accuracy = f(motion_coupling + memory_effects + curvature_resistance) 
 -----
 
 ## 🔬 **ADDITIONAL TESTABLE PREDICTIONS**
@@ -395,16 +345,6 @@ total_p_value = 1e-49  # Essentially impossible
 - **Terrestrial time variations**: Local motion effects on timekeeping
 - **Orbital clock comparisons**: Satellite time dilation validation
 
------
-
-## 🏆 **CONCLUSIONS**
-
-### **Overwhelming Evidence for MBT**
-
-- **7 independent datasets** all favor MBT over standard models
-- **Multiple astrophysical scales** from binary stars to cosmic structure
-- **Diverse physical phenomena** unified by single motion-based framework
-- **Cumulative probability** of coincidence < 10⁻⁴⁹
 -----
 
 ## 📚 **DATA SOURCES**
