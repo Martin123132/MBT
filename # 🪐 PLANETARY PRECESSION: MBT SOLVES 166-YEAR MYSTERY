@@ -166,19 +166,6 @@ def mercury_mbt_analysis():
     return 531.12  # Exactly matches observation!
 ```
 
-### **Comparison with Alternative Theories**
-
-|Theory                 |Prediction (″/cy)|Status       |Notes                      |
-|-----------------------|-----------------|-------------|---------------------------|
-|**Newtonian + Planets**|530.68           |✅ Accurate   |Known gravitational effects|
-|**General Relativity** |42.98            |✅ Partial    |Only 7.5% of anomaly       |
-|**MOND**               |~45              |❌ Wrong      |Modified gravity fails     |
-|**Extra Dimensions**   |Variable         |❌ Ad hoc     |Requires fine-tuning       |
-|**Dark Matter**        |<1               |❌ Irrelevant |No local concentration     |
-|**MBT Motion-Memory**  |**531.12**       |✅ **Perfect**|**Complete explanation**   |
-
------
-
 ## 🌍 **EARTH’S ORBITAL MEMORY VALIDATION**
 
 ### **Earth Precession Components**
@@ -383,9 +370,9 @@ validation_methods = {
 
 -----
 
-## 🏆 **REVOLUTIONARY IMPLICATIONS**
+ IMPLICATIONS**
 
-### **Complete Orbital Mechanics Revolution**
+### **Complete Orbital Mechanics 
 
 ```python
 # New orbital dynamics framework
@@ -424,36 +411,5 @@ applications = {
 }
 ```
 
------
-
-## 🎯 **CONCLUSION: 166-YEAR MYSTERY SOLVED**
-
-### **What We’ve Proven**
-
-✅ **Einstein was incomplete** - GR explains only 7.5% of Mercury’s anomaly  
-✅ **MBT explains 100%** - Motion-memory accounts for all unexplained precession  
-✅ **Universal scaling law** - Velocity² dependence validates across all planets  
-✅ **Predictive power** - Framework extends to exoplanets and binary systems  
-✅ **Technology implications** - Navigation, missions, and gravitational wave detection
-
-### **The Bottom Line**
-
-**For 166 years, physicists couldn’t fully explain planetary precession.**
-**Einstein solved 7.5% with spacetime curvature.**
-**MBT solves the remaining 92.5% with motion-memory.**
-
-**The mystery that stumped Le Verrier, Einstein, and generations of physicists is finally solved.**
-
-**Motion = Being Theory doesn’t just explain galaxy clusters - it explains the fundamental dynamics of our own solar system.**
-
------
-
-## 🚀 **NEXT PHASE: SYSTEMATIC VALIDATION**
-
-**We’ve now proven MBT across:**
-
-- ✅ **13 galaxy clusters** (95.6% average accuracy)
-- ✅ **Quasar time dilation** (10σ ΛCDM failure)
-- ✅ **Planetary precession** (166-year mystery solved)
-
+--
 
