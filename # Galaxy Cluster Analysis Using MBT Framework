@@ -56,23 +56,6 @@ def rmse_loss(flat_params):
 
 ## Results Summary
 
-### Abell 2744 Analysis
-The code demonstrates progressive optimization from 3 to 7 Gaussians:
-
-**3-Gaussian Fit:**
-- Initial RMSE: ~0.05 (optimized parameters shown)
-- Components include both positive and negative amplitude terms
-
-**6-Gaussian Fit:**
-- Final RMSE: Not explicitly shown but improved fit quality
-- Individual component visualization available
-- Better capture of complex structure
-
-**7-Gaussian Fit:**
-- Extended sigma bounds (1-40 pixels)
-- Global optimization for parameter space exploration
-- Individual Gaussian decomposition plotted
-
 ### Expanded Survey Results
 
 **13 Galaxy Clusters Analyzed:**
