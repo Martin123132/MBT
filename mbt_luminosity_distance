@@ -1,0 +1,205 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
+import requests, io
+
+# 1. Download real Pantheon+ data
+url = "https://raw.githubusercontent.com/PantheonPlusSH0ES/DataRelease/main/Pantheon+_Data/4_DISTANCES_AND_COVAR/Pantheon+SH0ES.dat"
+resp = requests.get(url)
+if resp.status_code != 200:
+    raise RuntimeError(f"Failed to download Pantheon+ data: status {resp.status_code}")
+
+df = pd.read_csv(io.StringIO(resp.text), sep=r"\s+", comment="#")
+print("Loaded Pantheon+ data with columns:", df.columns)
+
+# Extract relevant columns
+z = df['zCMB'].values
+mu = df['MU_SH0ES'].values
+mu_err = df['MU_SH0ES_ERR_DIAG'].values
+
+# Filter valid data
+mask = (mu_err > 0) & np.isfinite(mu) & (z > 0)
+z, mu, mu_err = z[mask], mu[mask], mu_err[mask]
+print(f"Using {len(z)} valid data points")
+
+# 2. Define MBT distance models
+c = 299792.458  # km/s
+
+def mbt_distance(z, alpha, beta, H0, transition):
+    denom = 1 + alpha * np.log(1 + z) + beta * z
+    return (c / H0) * (z * (1 + transition * z)) / denom
+
+def mbt_luminosity_distance(z, alpha, beta, H0, transition, highz, quad):
+    d_M = mbt_distance(z, alpha, beta, H0, transition)
+    correction = 1 + highz * np.tanh(z / transition) + quad * z**2
+    return d_M * correction
+
+def mu_model_4param(z, alpha, beta, H0, transition):
+    """4-parameter model (your optimal version)"""
+    dL = mbt_distance(z, alpha, beta, H0, transition) * (1 + z)  # Convert to luminosity distance
+    return 5 * np.log10(dL) + 25
+
+def mu_model_5param(z, alpha, beta, H0, transition, highz):
+    """5-parameter model (add high-z correction)"""
+    dL = mbt_luminosity_distance(z, alpha, beta, H0, transition, highz, 0.0)
+    return 5 * np.log10(dL) + 25
+
+def mu_model_6param(z, alpha, beta, H0, transition, highz, quad):
+    """6-parameter model (full version)"""
+    dL = mbt_luminosity_distance(z, alpha, beta, H0, transition, highz, quad)
+    return 5 * np.log10(dL) + 25
+
+# 3. Fit models to Pantheon+ data only
+print("\n=== FITTING PANTHEON+ DATA ONLY ===")
+
+# Fit 4-parameter model
+try:
+    p0_4param = [0.4, 0.01, 67.0, 0.03]
+    popt_4param, pcov_4param = curve_fit(mu_model_4param, z, mu, sigma=mu_err,
+                                        p0=p0_4param, absolute_sigma=True,
+                                        bounds=([0.05, 0.001, 60, 0.001], 
+                                               [0.5, 0.2, 80, 0.1]))
+    success_4param = True
+    print("4-parameter fit successful")
+except Exception as e:
+    print(f"4-parameter fit failed: {e}")
+    success_4param = False
+
+# Fit 5-parameter model
+try:
+    p0_5param = [*popt_4param, 0.1] if success_4param else [0.4, 0.01, 67.0, 0.03, 0.1]
+    popt_5param, pcov_5param = curve_fit(mu_model_5param, z, mu, sigma=mu_err,
+                                        p0=p0_5param, absolute_sigma=True,
+                                        bounds=([0.05, 0.001, 60, 0.001, 0.05], 
+                                               [0.5, 0.2, 80, 0.1, 0.5]))
+    success_5param = True
+    print("5-parameter fit successful")
+except Exception as e:
+    print(f"5-parameter fit failed: {e}")
+    success_5param = False
+
+# Fit 6-parameter model
+try:
+    p0_6param = [*popt_5param, 0.01] if success_5param else [0.4, 0.01, 67.0, 0.03, 0.1, 0.01]
+    popt_6param, pcov_6param = curve_fit(mu_model_6param, z, mu, sigma=mu_err,
+                                        p0=p0_6param, absolute_sigma=True,
+                                        bounds=([0.05, 0.001, 60, 0.001, 0.05, -0.05], 
+                                               [0.5, 0.2, 80, 0.1, 0.5, 0.05]))
+    success_6param = True
+    print("6-parameter fit successful")
+except Exception as e:
+    print(f"6-parameter fit failed: {e}")
+    success_6param = False
+
+# 4. Compute chi2/dof for successful fits
+def chi2(model, params):
+    predicted = model(z, *params)
+    return np.sum(((mu - predicted) / mu_err) ** 2)
+
+results = {}
+
+if success_4param:
+    chi2_4param = chi2(mu_model_4param, popt_4param)
+    dof_4param = len(z) - len(popt_4param)
+    results['4-param'] = {
+        'params': popt_4param,
+        'chi2_dof': chi2_4param / dof_4param,
+        'aic': 2 * len(popt_4param) + chi2_4param,
+        'param_names': ['α', 'β', 'H₀', 'transition']
+    }
+
+if success_5param:
+    chi2_5param = chi2(mu_model_5param, popt_5param)
+    dof_5param = len(z) - len(popt_5param)
+    results['5-param'] = {
+        'params': popt_5param,
+        'chi2_dof': chi2_5param / dof_5param,
+        'aic': 2 * len(popt_5param) + chi2_5param,
+        'param_names': ['α', 'β', 'H₀', 'transition', 'highz']
+    }
+
+if success_6param:
+    chi2_6param = chi2(mu_model_6param, popt_6param)
+    dof_6param = len(z) - len(popt_6param)
+    results['6-param'] = {
+        'params': popt_6param,
+        'chi2_dof': chi2_6param / dof_6param,
+        'aic': 2 * len(popt_6param) + chi2_6param,
+        'param_names': ['α', 'β', 'H₀', 'transition', 'highz', 'quad']
+    }
+
+# Print results
+print("\n=== PANTHEON+ ONLY RESULTS ===")
+for model_name, result in results.items():
+    print(f"\n{model_name}:")
+    for name, value in zip(result['param_names'], result['params']):
+        print(f"  {name} = {value:.4f}")
+    print(f"  χ²/dof = {result['chi2_dof']:.4f}")
+    print(f"  AIC = {result['aic']:.2f}")
+
+# Find best model
+if results:
+    best_model = min(results.items(), key=lambda x: x[1]['aic'])
+    print(f"\nBest model by AIC: {best_model[0]}")
+
+# 5. Plot results
+fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8), sharex=True,
+                               gridspec_kw={'height_ratios': [3, 1]})
+
+# Top panel: Hubble diagram
+ax1.errorbar(z, mu, yerr=mu_err, fmt='.', color='lightgray', alpha=0.5, 
+            label=f"Pantheon+ (N={len(z)})")
+
+z_sorted = np.sort(z)
+colors = ['red', 'blue', 'green']
+models = [(mu_model_4param, '4-param'), (mu_model_5param, '5-param'), (mu_model_6param, '6-param')]
+successful_fits = [(mu_model_4param, popt_4param, '4-param'), 
+                   (mu_model_5param, popt_5param, '5-param'), 
+                   (mu_model_6param, popt_6param, '6-param')]
+
+plot_data = []
+if success_4param:
+    plot_data.append((mu_model_4param, popt_4param, '4-param', results['4-param']['chi2_dof']))
+if success_5param:
+    plot_data.append((mu_model_5param, popt_5param, '5-param', results['5-param']['chi2_dof']))
+if success_6param:
+    plot_data.append((mu_model_6param, popt_6param, '6-param', results['6-param']['chi2_dof']))
+
+for i, (model, params, name, chi2_dof) in enumerate(plot_data):
+    ax1.plot(z_sorted, model(z_sorted, *params), color=colors[i], 
+            label=f"{name} (χ²/dof={chi2_dof:.3f})")
+
+ax1.set_xscale('log')
+ax1.set_ylabel("Distance Modulus μ")
+ax1.legend()
+ax1.set_title("MBT Model Fits to Pantheon+ Data Only")
+
+# Bottom panel: Residuals
+for i, (model, params, name, chi2_dof) in enumerate(plot_data):
+    residuals = mu - model(z, *params)
+    ax2.scatter(z, residuals, color=colors[i], alpha=0.6, s=1, label=f"{name}")
+
+ax2.axhline(0, color='black', ls='--', alpha=0.7)
+ax2.set_xscale('log')
+ax2.set_xlabel("Redshift z")
+ax2.set_ylabel("Residuals")
+ax2.legend()
+
+plt.tight_layout()
+plt.show()
+
+# 6. Compare with joint fit results
+print("\n=== COMPARISON WITH JOINT FITS ===")
+print("Individual dataset fitting allows you to:")
+print("1. Achieve better χ²/dof on single datasets")
+print("2. Identify which datasets drive parameter values")
+print("3. See where model tensions arise")
+print("4. Validate that your model physics works for each observable type")
+
+if results:
+    best_result = results[best_model[0]]
+    print(f"\nBest Pantheon-only fit: {best_model[0]}")
+    print(f"χ²/dof = {best_result['chi2_dof']:.4f}")
+    print("Compare this to your joint fit χ²/dof = 8.7")
+    print("The difference shows the tension between datasets")
