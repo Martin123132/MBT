@@ -91,13 +91,7 @@ These patterns are consistent with several possible interpretations. I explore o
 
 ---
 
-## What's Been Tested
 
-✅ **Rotation curve fits:** MTS model matches SPARC galaxies (mean error 13.2%)  
-✅ **Cosmological distances:** Superior fits to Pantheon+ supernovae (χ²/dof = 8.7)  
-✅ **Lensing reconstruction:** Reproduces Abell 2744 (RMSE = 0.002)  
-✅ **Curvature trap:** Generates m = 0.79, 1.0, 1.9 with parameter tuning  
-✅ **CMB correlations:** Modest signals in Cold Spot region (preliminary)
 
 ---
 
