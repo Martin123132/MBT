@@ -99,23 +99,6 @@ These patterns are consistent with several possible interpretations. I explore o
 ✅ **Curvature trap:** Generates m = 0.79, 1.0, 1.9 with parameter tuning  
 ✅ **CMB correlations:** Modest signals in Cold Spot region (preliminary)
 
-❓ **Not yet tested:** High-z evolution, cluster dynamics details, quantum predictions
-
----
-
-## Open Questions
-
-The honest truth is **I don't know** the answers to these:
-
-1. **Why m = 1.878 exactly?** (Composite model explains it, but is that fundamental?)
-2. **Do patterns evolve with redshift?** (Needs high-z rotation curves)
-3. **Can simulations reproduce it?** (N-body comparison needed)
-4. **What about modified gravity?** (Patterns constrain but don't prove mechanisms)
-5. **Is discrete spacetime real?** (Observational signatures unclear)
-6. **Do memorons exist?** (No detection method yet)
-
-**These aren't rhetorical — they're actual uncertainties.**
-
 ---
 
 ## How to Use This Repository
