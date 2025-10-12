@@ -1,0 +1,340 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
+from scipy.integrate import quad
+import requests, io
+
+# ============================================================================
+# 1. LOAD PANTHEON+ DATA
+# ============================================================================
+url = "https://raw.githubusercontent.com/PantheonPlusSH0ES/DataRelease/main/Pantheon+_Data/4_DISTANCES_AND_COVAR/Pantheon+SH0ES.dat"
+resp = requests.get(url)
+df = pd.read_csv(io.StringIO(resp.text), sep=r"\s+", comment="#")
+
+z = df['zCMB'].values
+mu = df['MU_SH0ES'].values
+mu_err = df['MU_SH0ES_ERR_DIAG'].values
+
+mask = (mu_err > 0) & np.isfinite(mu) & (z > 0) & (z < 2.5)
+z, mu, mu_err = z[mask], mu[mask], mu_err[mask]
+
+c = 299792.458  # km/s
+
+print("="*70)
+print("MBT-4 vs ΛCDM COMPARISON (ROBUST VERSION)")
+print("="*70)
+print(f"📊 Using {len(z)} supernovae with z < 2.5\n")
+
+# ============================================================================
+# 2. MBT-4 MODEL
+# ============================================================================
+def mu_mbt(z, alpha, beta, H0, transition):
+    denom = 1 + alpha * np.log(1 + z) + beta * z
+    dL = (c / H0) * (z * (1 + transition * z)) / denom
+    dL = dL * (1 + z)  # Luminosity distance
+    dL = np.where(dL > 0, dL, 1e-10)  # Avoid log(negative)
+    return 5 * np.log10(dL) + 25
+
+# ============================================================================
+# 3. ΛCDM MODEL (ROBUST IMPLEMENTATION)
+# ============================================================================
+def mu_lcdm(z_array, H0, Om):
+    """Flat ΛCDM with robust numerical integration"""
+   
+    def E(z):
+        """Hubble parameter E(z) = H(z)/H0"""
+        return np.sqrt(Om * (1 + z)**3 + (1 - Om))
+   
+    # Pre-compute integral for a grid (much faster)
+    z_max = np.max(z_array) * 1.1
+    z_grid = np.linspace(0, z_max, 1000)
+   
+    # Comoving distance integral: ∫ dz/E(z)
+    integrand = 1.0 / E(z_grid)
+   
+    # Cumulative integral using trapezoidal rule
+    dz = z_grid[1] - z_grid[0]
+    comoving_dist = np.cumsum(integrand) * dz
+   
+    # Interpolate for each requested redshift
+    result = []
+    for zi in z_array:
+        if zi <= 0:
+            result.append(np.nan)
+            continue
+       
+        # Find nearest grid point
+        idx = np.searchsorted(z_grid, zi)
+        if idx == 0:
+            dc = 0
+        elif idx >= len(z_grid):
+            dc = comoving_dist[-1]
+        else:
+            # Linear interpolation
+            z1, z2 = z_grid[idx-1], z_grid[idx]
+            dc1, dc2 = comoving_dist[idx-1], comoving_dist[idx]
+            dc = dc1 + (dc2 - dc1) * (zi - z1) / (z2 - z1)
+       
+        # Luminosity distance
+        dL = (c / H0) * (1 + zi) * dc
+        result.append(dL)
+   
+    result = np.array(result)
+    result = np.where(result > 0, result, 1e-10)
+    return 5 * np.log10(result) + 25
+
+# ============================================================================
+# 4. TEST ΛCDM FIRST
+# ============================================================================
+print("🔴 Testing ΛCDM model...")
+# Use Planck 2018 values as initial guess
+H0_test, Om_test = 67.4, 0.315
+mu_test = mu_lcdm(z, H0_test, Om_test)
+
+if np.any(~np.isfinite(mu_test)):
+    print("❌ ΛCDM model has numerical issues")
+    print(f"   Non-finite values: {np.sum(~np.isfinite(mu_test))}/{len(mu_test)}")
+else:
+    print("✅ ΛCDM model working correctly")
+    print(f"   Test χ² = {np.sum(((mu - mu_test)/mu_err)**2):.2f}")
+
+# ============================================================================
+# 5. FIT BOTH MODELS
+# ============================================================================
+print("\n🔵 Fitting MBT-4 (4 parameters)...")
+p0_mbt = [0.05, 0.3, 72.0, 0.0005]
+bounds_mbt = ([0.0, 0.0, 60, -0.2], [0.5, 1.0, 80, 0.5])
+
+try:
+    popt_mbt, pcov_mbt = curve_fit(
+        mu_mbt, z, mu, sigma=mu_err, p0=p0_mbt,
+        absolute_sigma=True, bounds=bounds_mbt, maxfev=10000
+    )
+    alpha, beta, H0_mbt, trans = popt_mbt
+   
+    mu_pred_mbt = mu_mbt(z, *popt_mbt)
+    chi2_mbt = np.sum(((mu - mu_pred_mbt) / mu_err)**2)
+    dof_mbt = len(mu) - 4
+    rmse_mbt = np.sqrt(np.mean((mu - mu_pred_mbt)**2))
+   
+    print(f"✅ α={alpha:.4f}, β={beta:.4f}, H₀={H0_mbt:.2f}, transition={trans:.5f}")
+    print(f"   χ² = {chi2_mbt:.2f}, dof = {dof_mbt}, χ²/dof = {chi2_mbt/dof_mbt:.4f}")
+    print(f"   RMSE = {rmse_mbt:.4f} mag")
+    mbt_success = True
+except Exception as e:
+    print(f"❌ MBT-4 fit failed: {e}")
+    mbt_success = False
+
+print("\n🔴 Fitting ΛCDM (2 parameters)...")
+p0_lcdm = [70.0, 0.30]
+bounds_lcdm = ([60, 0.2], [80, 0.4])
+
+try:
+    popt_lcdm, pcov_lcdm = curve_fit(
+        mu_lcdm, z, mu, sigma=mu_err, p0=p0_lcdm,
+        absolute_sigma=True, bounds=bounds_lcdm, maxfev=10000
+    )
+    H0_lcdm, Om_lcdm = popt_lcdm
+   
+    mu_pred_lcdm = mu_lcdm(z, *popt_lcdm)
+    chi2_lcdm = np.sum(((mu - mu_pred_lcdm) / mu_err)**2)
+    dof_lcdm = len(mu) - 2
+    rmse_lcdm = np.sqrt(np.mean((mu - mu_pred_lcdm)**2))
+   
+    print(f"✅ H₀={H0_lcdm:.2f} km/s/Mpc, Ωₘ={Om_lcdm:.4f}")
+    print(f"   χ² = {chi2_lcdm:.2f}, dof = {dof_lcdm}, χ²/dof = {chi2_lcdm/dof_lcdm:.4f}")
+    print(f"   RMSE = {rmse_lcdm:.4f} mag")
+    lcdm_success = True
+except Exception as e:
+    print(f"❌ ΛCDM fit failed: {e}")
+    lcdm_success = False
+
+# ============================================================================
+# 6. COMPARISON (only if both succeeded)
+# ============================================================================
+if mbt_success and lcdm_success:
+    print("\n" + "="*70)
+    print("STATISTICAL COMPARISON")
+    print("="*70)
+   
+    # Chi-squared comparison
+    delta_chi2 = chi2_mbt - chi2_lcdm
+    delta_dof = 4 - 2  # MBT has 2 more parameters
+   
+    print(f"\n📊 Goodness of Fit:")
+    print(f"   MBT-4:  χ²/dof = {chi2_mbt/dof_mbt:.4f} | RMSE = {rmse_mbt:.4f}")
+    print(f"   ΛCDM:   χ²/dof = {chi2_lcdm/dof_lcdm:.4f} | RMSE = {rmse_lcdm:.4f}")
+    print(f"   Δ(χ²/dof) = {chi2_mbt/dof_mbt - chi2_lcdm/dof_lcdm:.4f}")
+   
+    improvement = (1 - (chi2_mbt/dof_mbt)/(chi2_lcdm/dof_lcdm)) * 100
+    print(f"   MBT-4 improvement: {improvement:+.1f}%")
+   
+    # AIC (Akaike Information Criterion)
+    n = len(mu)
+    aic_mbt = chi2_mbt + 2 * 4
+    aic_lcdm = chi2_lcdm + 2 * 2
+    delta_aic = aic_mbt - aic_lcdm
+   
+    # BIC (Bayesian Information Criterion)
+    bic_mbt = chi2_mbt + 4 * np.log(n)
+    bic_lcdm = chi2_lcdm + 2 * np.log(n)
+    delta_bic = bic_mbt - bic_lcdm
+   
+    print(f"\n📈 Model Selection Criteria:")
+    print(f"   MBT-4:  AIC = {aic_mbt:.1f} | BIC = {bic_mbt:.1f}")
+    print(f"   ΛCDM:   AIC = {aic_lcdm:.1f} | BIC = {bic_lcdm:.1f}")
+    print(f"   ΔAIC = {delta_aic:.1f} (negative = MBT better)")
+    print(f"   ΔBIC = {delta_bic:.1f} (negative = MBT better)")
+   
+    # ============================================================================
+    # 7. VERDICT
+    # ============================================================================
+    print("\n" + "="*70)
+    print("VERDICT")
+    print("="*70)
+   
+    if chi2_mbt/dof_mbt < chi2_lcdm/dof_lcdm:
+        chi2_better = (chi2_lcdm/dof_lcdm - chi2_mbt/dof_mbt) / (chi2_lcdm/dof_lcdm) * 100
+        print(f"\n✅ MBT-4 has BETTER χ²/dof ({chi2_better:.1f}% improvement)")
+    else:
+        print(f"\n❌ ΛCDM has better χ²/dof")
+   
+    if delta_aic < -10:
+        print("✅ MBT-4 is STRONGLY PREFERRED by AIC (ΔAIC < -10)")
+    elif delta_aic < -2:
+        print("✅ MBT-4 is PREFERRED by AIC (ΔAIC < -2)")
+    elif abs(delta_aic) <= 2:
+        print("⚖️  Models are EQUIVALENT by AIC (|ΔAIC| ≤ 2)")
+    else:
+        print("❌ ΛCDM is PREFERRED by AIC")
+   
+    if delta_bic < -10:
+        print("✅ MBT-4 is STRONGLY PREFERRED by BIC (ΔBIC < -10)")
+    elif delta_bic < -6:
+        print("✅ MBT-4 is PREFERRED by BIC (ΔBIC < -6)")
+    elif abs(delta_bic) <= 2:
+        print("⚖️  Models are EQUIVALENT by BIC (|ΔBIC| ≤ 2)")
+    else:
+        print("❌ ΛCDM is PREFERRED by BIC")
+   
+    print("\n" + "="*70)
+   
+    if delta_aic < -2 and chi2_mbt/dof_mbt < chi2_lcdm/dof_lcdm:
+        print("🎯 CONCLUSION: MBT-4 OUTPERFORMS ΛCDM")
+        print("   → This is publication-worthy!")
+    elif abs(delta_aic) <= 2:
+        print("🎯 CONCLUSION: MBT-4 MATCHES ΛCDM")
+        print("   → Alternative parameterization, still interesting")
+    else:
+        print("🎯 CONCLUSION: ΛCDM IS PREFERRED")
+        print("   → Standard model performs better")
+   
+    print("="*70)
+   
+    # ============================================================================
+    # 8. VISUALIZATION
+    # ============================================================================
+    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+   
+    # Plot 1: Hubble diagram
+    ax = axes[0, 0]
+    ax.errorbar(z, mu, yerr=mu_err, fmt='.', color='lightgray', alpha=0.4,
+                label=f'Pantheon+ (N={len(z)})', zorder=1)
+   
+    z_grid = np.logspace(-3, np.log10(2.5), 300)
+    ax.plot(z_grid, mu_mbt(z_grid, *popt_mbt), 'b-', lw=2.5,
+            label=f'MBT-4: χ²/dof={chi2_mbt/dof_mbt:.3f}', zorder=3)
+    ax.plot(z_grid, mu_lcdm(z_grid, *popt_lcdm), 'r--', lw=2.5,
+            label=f'ΛCDM: χ²/dof={chi2_lcdm/dof_lcdm:.3f}', zorder=2)
+   
+    ax.set_xscale('log')
+    ax.set_xlabel('Redshift z', fontsize=12)
+    ax.set_ylabel('Distance Modulus μ', fontsize=12)
+    ax.set_title('Hubble Diagram: MBT-4 vs ΛCDM', fontsize=14, fontweight='bold')
+    ax.legend(fontsize=10)
+    ax.grid(alpha=0.3)
+   
+    # Plot 2: Residuals
+    ax = axes[0, 1]
+    res_mbt = mu - mu_pred_mbt
+    res_lcdm = mu - mu_pred_lcdm
+   
+    ax.scatter(z, res_mbt, s=3, alpha=0.5, label='MBT-4', color='blue')
+    ax.scatter(z, res_lcdm, s=3, alpha=0.5, label='ΛCDM', color='red')
+    ax.axhline(0, color='black', linestyle='--', lw=1)
+    ax.fill_between([0, 3], -mu_err.mean(), mu_err.mean(), alpha=0.2, color='gray')
+   
+    ax.set_xlabel('Redshift z', fontsize=12)
+    ax.set_ylabel('Residual (mag)', fontsize=12)
+    ax.set_title('Residuals vs Redshift', fontsize=14, fontweight='bold')
+    ax.legend(fontsize=10)
+    ax.grid(alpha=0.3)
+    ax.set_xlim(0, 2.5)
+   
+    # Plot 3: Residual histograms
+    ax = axes[1, 0]
+    bins = np.linspace(-3, 3, 50)
+    ax.hist(res_mbt/mu_err, bins=bins, alpha=0.6,
+            label=f'MBT-4 (σ={np.std(res_mbt/mu_err):.3f})', color='blue', density=True)
+    ax.hist(res_lcdm/mu_err, bins=bins, alpha=0.6,
+            label=f'ΛCDM (σ={np.std(res_lcdm/mu_err):.3f})', color='red', density=True)
+   
+    # Overplot Gaussian
+    x = np.linspace(-3, 3, 100)
+    ax.plot(x, np.exp(-0.5*x**2)/np.sqrt(2*np.pi), 'k--', lw=2, label='N(0,1)')
+   
+    ax.axvline(0, color='black', linestyle='--', lw=1)
+    ax.set_xlabel('Normalized Residual (σ)', fontsize=12)
+    ax.set_ylabel('Density', fontsize=12)
+    ax.set_title('Residual Distribution', fontsize=14, fontweight='bold')
+    ax.legend(fontsize=10)
+    ax.grid(alpha=0.3)
+   
+    # Plot 4: Summary text
+    ax = axes[1, 1]
+    ax.axis('off')
+   
+    summary = f"""
+MBT-4 vs ΛCDM COMPARISON
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Sample: {len(z)} SNe Ia (z < 2.5)
+
+MBT-4 (4 params):
+  α = {alpha:.4f}
+  β = {beta:.4f}
+  H₀ = {H0_mbt:.2f} km/s/Mpc
+  transition = {trans:.5f}
+ 
+  χ² = {chi2_mbt:.1f}
+  χ²/dof = {chi2_mbt/dof_mbt:.4f}
+  RMSE = {rmse_mbt:.4f} mag
+
+ΛCDM (2 params):
+  H₀ = {H0_lcdm:.2f} km/s/Mpc
+  Ωₘ = {Om_lcdm:.4f}
+ 
+  χ² = {chi2_lcdm:.1f}
+  χ²/dof = {chi2_lcdm/dof_lcdm:.4f}
+  RMSE = {rmse_lcdm:.4f} mag
+
+Comparison:
+  Δ(χ²/dof) = {chi2_mbt/dof_mbt - chi2_lcdm/dof_lcdm:.4f}
+  ΔAIC = {delta_aic:.1f}
+  ΔBIC = {delta_bic:.1f}
+
+{'✅ MBT-4 PREFERRED' if delta_aic < -2 else '⚖️  EQUIVALENT' if abs(delta_aic) <= 2 else '❌ ΛCDM PREFERRED'}
+    """
+   
+    ax.text(0.05, 0.5, summary, fontsize=10, family='monospace',
+            verticalalignment='center',
+            bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.3))
+   
+    plt.tight_layout()
+    plt.savefig('mbt_vs_lcdm_comparison.png', dpi=300, bbox_inches='tight')
+    print("\n💾 Saved: mbt_vs_lcdm_comparison.png")
+    plt.show()
+
+else:
+    print("\n⚠️  Cannot compare models - one or both fits failed")
