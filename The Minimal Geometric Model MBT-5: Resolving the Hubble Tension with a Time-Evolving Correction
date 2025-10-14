@@ -1,12 +1,12 @@
-# The Minimal Geometric Model MBT-5: Resolving the Hubble Tension with a Time-Evolving Correction
+# The Minimal Geometric Model MTS-5: Resolving the Hubble Tension with a Time-Evolving Correction
 # ====================================================================
 
 """
 Abstract
 ---------
 The standard ΛCDM model of cosmology requires two distinct components (Dark Matter and Dark Energy) and currently suffers from the persistent Hubble Tension — a significant discrepancy between the local (late-time) and global (early-time) measurements of the Hubble constant, H₀.
-We introduce the MBT-5 model, a minimalist, 5-parameter framework that replaces the arbitrary cosmological constant with a physically motivated, time-evolving geometric correction.
-By performing a global fit against a combined dataset of Type Ia Supernovae (SNe Ia), Baryon Acoustic Oscillations (BAO), and direct Hubble rate H(z) measurements, we demonstrate that the MBT-5 model is statistically superior to its static counterpart (ΔAIC = -13.09) and yields a best-fit value of:
+We introduce the Mts-5 model, a minimalist, 5-parameter framework that replaces the arbitrary cosmological constant with a physically motivated, time-evolving geometric correction.
+By performing a global fit against a combined dataset of Type Ia Supernovae (SNe Ia), Baryon Acoustic Oscillations (BAO), and direct Hubble rate H(z) measurements, we demonstrate that the Mts-5 model is statistically superior to its static counterpart (ΔAIC = -13.09) and yields a best-fit value of:
 
     H₀ = 72.41 km s⁻¹ Mpc⁻¹
 
@@ -106,6 +106,6 @@ This time-evolution effectively shifts the global fit H₀ value toward the loca
 # --------------------------------------------------------------------
 
 """
-The MBT-5 model stands as a statistically validated alternative to ΛCDM, achieving a high-quality global fit with only five parameters.
+The MTS-5 model stands as a statistically validated alternative to ΛCDM, achieving a high-quality global fit with only five parameters.
 The data strongly mandates a time-evolving geometric modification (α₁ ≠ 0).
-Most importantly, the MBT-5 model successfully determines a Hubble constant that is simultaneously compatible with both early- and late-time cosmological probes, offering a physically grounded solution to the persistent Hubble Tension.
+Most importantly, the Mts-5 model successfully determines a Hubble constant that is simultaneously compatible with both early- and late-time cosmological probes, offering a physically grounded solution to the persistent Hubble Tension.
