@@ -27,14 +27,7 @@ Rather than starting with a theory and fitting data to it, this project follows 
 
 ---
 
-## Philosophy
 
-### What I'm NOT Claiming
-
-❌ "This is the Theory of Everything"  
-❌ "Dark matter doesn't exist"  
-❌ "Standard physics is wrong"  
-❌ "I've solved quantum gravity"
 
 ### What I AM Showing
 
